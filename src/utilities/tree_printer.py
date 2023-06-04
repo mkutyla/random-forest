@@ -1,29 +1,34 @@
-import Node as ND
-import DecisionTree as DT
 from treelib import Tree
+
+from src.tree.decision_tree import DecisionTree
+from src.tree.node import Node
 
 tree = Tree()
 
 
-def draw_tree(dt: DT.DecisionTree):
+def print_tree(dt: DecisionTree):
     """
-    Draws a DT decision tree in readable format.
+    Draws a DecisionTree in a readable format.
 
     Args:
         dt (DT.DecisionTree): a decision tree to draw
     """
     node = dt.root
     label = node.children_branches[0].label
+    if ("<" in label) or (">" in label):
+        tree.create_node(f"{node.label} {label}", f"{node}")
+    else:
+        tree.create_node(f"{node.label}", f"{node}")
 
-    tree.create_node(f"{node.label} {label}", f"{node}")
     for branch in node.children_branches:
-        __print_nodes(branch.child)
-    tree.show()
-    with open("tree.txt", "w"):
-        tree.save2file("tree.txt")
+        __add_nodes(branch.child)
+
+    filename = '../output/tree.txt'
+    with open(filename, 'w') as _:
+        tree.save2file(filename)
 
 
-def __print_nodes(node: ND.Node):
+def __add_nodes(node: Node):
     if node.is_leaf():
         if "<=" in node.parent_branch.label:
             tree.create_node(
@@ -34,7 +39,7 @@ def __print_nodes(node: ND.Node):
                 f"(0) {node.cls}", f"{node}", parent=f"{node.parent_branch.parent}"
             )
         else:
-            label = float(node.parent_branch.label[1:])  # cutting off "="
+            label = node.parent_branch.label[1:]  # cutting off "="
             tree.create_node(
                 f"({label}) {node.cls}",
                 f"{node}",
@@ -56,12 +61,12 @@ def __print_nodes(node: ND.Node):
                 parent=f"{node.parent_branch.parent}",
             )
         else:
-            label = float(node.parent_branch.label[1:])  # cutting off "="
+            label = node.parent_branch.label[1:]
             tree.create_node(
-                f"({label}) {node.label} {label}",
+                f"({label}) {node.label}",
                 f"{node}",
                 parent=f"{node.parent_branch.parent}",
             )
 
     for branch in node.children_branches:
-        __print_nodes(branch.child)
+        __add_nodes(branch.child)

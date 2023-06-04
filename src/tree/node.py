@@ -1,4 +1,4 @@
-from Branch import *
+import src.tree.branch as br
 
 
 class Node:
@@ -10,7 +10,7 @@ class Node:
         self.cls = None
 
     def add_child_branch(self, child: 'Node', split_at):
-        branch = Branch(self, child, split_at)
+        branch = br.Branch(self, child, split_at)
         child.parent_branch = branch
         self.children_branches.append(branch)
 
