@@ -3,7 +3,7 @@ import pandas as pd
 
 params = {
     "wine": {
-        "filename": "../../data/wine.csv",
+        "filename": "data/wine.csv",
         "target": "quality",
         "continuous": ["fixed acidity", "volatile acidity", "citric acid",
                        "residual sugar", "chlorides", "free sulfur dioxide",
@@ -11,17 +11,17 @@ params = {
                        "sulphates", "alcohol", "quality"]
     },
     "mushrooms": {
-        "filename": "../../data/mushrooms.csv",
+        "filename": "data/mushrooms.csv",
         "target": "class",
         "continuous": []
     },
     "heart": {
-        "filename": "../../data/heart.csv",
+        "filename": "data/heart.csv",
         "target": "output",
         "continuous": []
     },
     "diabetes": {
-        "filename": "../../data/diabetes.csv",
+        "filename": "data/diabetes.csv",
         "target": "diabetes",
         "continuous": ["age", "bmi", "HbA1c_level", "blood_glucose_level"]
     }
@@ -37,7 +37,9 @@ def get_attribute_domain(data: pd.DataFrame, cls: str):
     return data[cls].unique().tolist()
 
 
-def split_set(df: pd.DataFrame, cls: str, training_size: int = 7, test_size: int = 3):
+def split_set(df: pd.DataFrame, cls: str,
+              training_size: int = 5,
+              test_size: int = 5):
     df_classes = [df[df[cls] == c] for c in get_attribute_domain(df, cls)]
 
     training_set = None

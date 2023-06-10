@@ -1,12 +1,9 @@
 from treelib import Tree
 
-from src.tree.decision_tree import DecisionTree
-from src.tree.node import Node
-
 tree = Tree()
 
 
-def print_tree(dt: DecisionTree):
+def print_tree(dt):
     """
     Draws a DecisionTree in a readable format.
 
@@ -28,7 +25,7 @@ def print_tree(dt: DecisionTree):
         tree.save2file(filename)
 
 
-def __add_nodes(node: Node):
+def __add_nodes(node):
     if node.is_leaf():
         if "<=" in node.parent_branch.label:
             tree.create_node(

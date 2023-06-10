@@ -2,7 +2,6 @@ from src.forest.random_forest import RandomForest
 import pandas as pd
 import src.utilities.quality as qt
 import src.utilities.dataframes_handler as fh
-import json
 
 
 # def compare_modes():
@@ -28,9 +27,6 @@ import json
 #     # cm.print_conf_matrix(classes, predicted, expected)
 #     # cm.draw_conf_matrix(classes, predicted, expected)
 #
-#     draw_tree(dt)
-#     save(dt)
-
 def get_classes(data: pd.DataFrame, cls: str):
     return data[cls].unique().tolist()
 
@@ -46,7 +42,11 @@ if __name__ == "__main__":
 
     rf = RandomForest(df, continuous_attributes=param["continuous"])
     for i in range(1):
-        rf.fit(target, 100, split_strategy='mean')
+        rf.fit(target, 500,
+               model='id3',
+               split_strategy='mean',
+               threshold_strategy='best',
+               attributes_per_tree=3)
         predicted = rf.predict()
         expected = rf.expected
 
@@ -56,5 +56,4 @@ if __name__ == "__main__":
         quality.get_confusion_matrix()
         quality.print_confusion_matrix()
         measures = quality.get_measures()
-        print(f'[n={10*i}] ACC={measures["ACC"]}')
-        quality.draw_confusion_matrix()
+        print(measures)

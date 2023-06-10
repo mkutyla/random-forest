@@ -11,20 +11,21 @@ pd.set_option('chained_assignment', None)  # default='warn'
 class DecisionTree:
 
     def __init__(
-            self, class_attribute: str, continuous_attr: list[str], split_strategy: str = 'mean'
+            self, class_attribute: str, continuous_attr: list[str]
     ) -> None:
         self.cls = class_attribute
         self.continuous_attr = continuous_attr
 
-        self.root = None
         self.split_strategies = ('mean', 'median', 'buckets', 'search')
+        self.threshold_strategies = ('none', 'best')
         self.split_strategy_msg = f'[!] Permitted split strategies are [{", ".join(self.split_strategies)}]'
-        self.training_set = None
+        self.threshold_strategy_msg = f'[!] Permitted threshold strategies are [{", ".join(self.threshold_strategies)}]'
 
-        if split_strategy in self.split_strategies:
-            self.split_strategy = split_strategy
-        else:
-            raise Exception(f'{self.split_strategy_msg}, got {split_strategy} instead')
+        self.predicted = None
+        self.root = None
+        self.training_set = None
+        self.split_strategy = None
+        self.threshold_strategy = None
 
     def threshold(self, data: pd.DataFrame, attributes: list[str]) -> dict:
         information_gain = dict()
@@ -41,7 +42,9 @@ class DecisionTree:
                 continue
             information_gain[A] = [info_gain, split]
 
-        # thresholding TODO: pop worst splits
+        if self.threshold_strategy == 'best' and len(information_gain) != 0:
+            max_key = max(information_gain, key=information_gain.get)
+            information_gain = {max_key: information_gain[max_key]}
 
         return information_gain
 
@@ -91,7 +94,10 @@ class DecisionTree:
         if len(split_data) == 0:
             next_node.cls = eh.get_most_frequent_val(data, self.cls)
         else:
-            sub_tree = DecisionTree(self.cls, self.continuous_attr, split_strategy=self.split_strategy)
+            sub_tree = DecisionTree(self.cls, self.continuous_attr)
+            sub_tree.split_strategy = self.split_strategy
+            sub_tree.threshold_strategy = self.threshold_strategy
+
             next_node = sub_tree.build_tree(split_data, [x for x in attributes if x != split_attribute])
 
         return next_node
@@ -99,12 +105,17 @@ class DecisionTree:
     def fit(self, data: pd.DataFrame,
             attributes: list[str],
             split_strategy: str = 'mean',
-            threshold_strategy: str = None) -> None:
+            threshold_strategy: str = 'none') -> None:
 
         if split_strategy in self.split_strategies:
             self.split_strategy = split_strategy
         else:
             raise Exception(self.split_strategy_msg)
+
+        if threshold_strategy in self.threshold_strategies:
+            self.threshold_strategy = threshold_strategy
+        else:
+            raise Exception(self.threshold_strategy_msg)
 
         self.training_set = data
         self.build_tree(self.training_set, attributes)
@@ -165,8 +176,9 @@ class DecisionTree:
         # random selection if couldn't classify based on training set
         classes = dfh.get_attribute_domain(self.training_set, self.cls)
         prediction.apply(lambda x: x if x is not None else np.random.choice(classes))
+        self.predicted = np.array(prediction)
 
-        return np.array(prediction)
+        return self.predicted
 
     def __classify(self, node: nd.Node, df: pd.DataFrame, label: str):
         if node.is_leaf():

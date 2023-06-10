@@ -24,6 +24,7 @@ class RandomForest:
         self.model = None
         self.cls = None
         self.split_strategy = None
+        self.threshold_strategy = None
         self.trees = list()
         self.attributes = list()
         self.forest_size = 0
@@ -35,7 +36,11 @@ class RandomForest:
 
         # constants
         self.models = ('default', 'id3')
+        self.split_strategies = ('mean', 'median', 'buckets', 'search')
+        self.threshold_strategies = ('none', 'best')
         self.modes_msg = f'[!] Permitted modes are {", ".join(self.models)}'
+        self.split_strategy_msg = f'[!] Permitted split strategies are [{", ".join(self.split_strategies)}]'
+        self.threshold_strategy_msg = f'[!] Permitted threshold strategies are [{", ".join(self.threshold_strategies)}]'
 
     def preprocess_set(self):
         """
@@ -44,24 +49,31 @@ class RandomForest:
         for a in self.continuous_attributes:
             self.df[a] = self.df[a].replace(np.NaN, self.df[a].mean())
 
-    def fit(self, class_attribute: str, forest_size: int,
+    def fit(self,
+            class_attribute: str,
+            forest_size: int,
             attributes_per_tree: int = None,
-            model: str = 'default', split_strategy: str = 'buckets') -> None:
+            model: str = 'default',
+            split_strategy: str = 'buckets',
+            threshold_strategy: str = 'none') -> None:
 
-        self.cls = class_attribute
-        self.forest_size = forest_size
-        self.split_strategy = split_strategy
+        if model in self.models:
+            self.model = model
+        else:
+            raise Exception(self.modes_msg)
+
+        if split_strategy in self.split_strategies:
+            self.split_strategy = split_strategy
+        else:
+            raise Exception(self.split_strategy_msg)
+
+        if threshold_strategy in self.threshold_strategies:
+            self.threshold_strategy = threshold_strategy
+        else:
+            raise Exception(self.threshold_strategy_msg)
 
         self.attributes = self.df.columns.tolist()
         self.attributes.remove(class_attribute)
-
-        self.training_set, self.test_set = dfh.split_set(self.df, self.cls)
-        self.expected = self.test_set[self.cls]
-
-        self.cls_type = self.df[self.cls].dtype
-
-        self.trees = list()
-        self.predicted = pd.DataFrame()
 
         if attributes_per_tree is None:
             self.attributes_per_tree = int(np.sqrt(len(self.attributes)))
@@ -70,10 +82,18 @@ class RandomForest:
         else:
             raise Exception(f'[!] attributes_per_tree must be greater than 0')
 
-        if model in self.models:
-            self.model = model
-        else:
-            raise Exception(self.modes_msg)
+        self.cls = class_attribute
+        self.forest_size = forest_size
+        self.split_strategy = split_strategy
+        self.threshold_strategy = threshold_strategy
+
+        self.training_set, self.test_set = dfh.split_set(self.df, self.cls)
+        self.expected = self.test_set[self.cls]
+
+        self.cls_type = self.df[self.cls].dtype
+
+        self.trees = list()
+        self.predicted = pd.DataFrame()
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -100,8 +120,12 @@ class RandomForest:
     async def async_fit_tree(self):
         tree_set = self.training_set.sample(replace=True, frac=1)
         chosen_attributes = random.sample(self.attributes, self.attributes_per_tree)
-        clf = DecisionTree(self.cls, self.continuous_attributes, split_strategy=self.split_strategy)
-        clf.fit(tree_set, chosen_attributes)
+
+        clf = DecisionTree(self.cls, self.continuous_attributes)
+        clf.fit(tree_set,
+                chosen_attributes,
+                split_strategy=self.split_strategy,
+                threshold_strategy=self.threshold_strategy)
         self.trees.append(clf)
 
     async def async_fit_tree_id3(self):
@@ -115,6 +139,7 @@ class RandomForest:
         clf = clf.fit(chosen_columns, target)
         pr = np.array(clf.predict(self.test_set.loc[:, chosen_attributes]))
         pr = pd.DataFrame(pr)
+
         self.predicted = pd.concat(objs=[self.predicted, pr], axis=1)
 
     def predict(self):
@@ -126,7 +151,6 @@ class RandomForest:
                     return self.get_most_frequent()
             case _:
                 raise Exception(self.modes_msg)
-
         # runs only if model = 'default' and len(self.predicted)==0
         loop = asyncio.get_event_loop()
         future = asyncio.ensure_future(self.async_predict())

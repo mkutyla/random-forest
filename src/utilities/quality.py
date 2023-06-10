@@ -2,7 +2,8 @@ from collections import OrderedDict
 
 import numpy as np
 import matplotlib.pyplot as plt
-from prettycm import confusion_matrix, palette
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
 
 
 class Quality:
@@ -246,19 +247,21 @@ class Quality:
 
     def draw_confusion_matrix(self,
                               title: str = "Confusion matrix",
-                              filename: str = "../output/confusion_matrix.png"):
-        matrix = self.get_drawable_conf_matrix()
-        cm = confusion_matrix(matrix)
+                              filename: str = "output/confusion_matrix.png"):
 
-        cm.set_classname([cls for cls in self.classes])
-        cm.set_title(title)
-
-        pal = palette()
-        pal.draw(cm, filename)
+        cm = confusion_matrix(self.expected, self.predicted)
+        cmn = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        sns.heatmap(cmn, annot=True, fmt='.2f', xticklabels=self.classes, yticklabels=self.classes)
+        plt.ylabel('Actual')
+        plt.xlabel('Predicted')
+        plt.title(title)
+        plt.savefig(filename)
 
     @staticmethod
-    def plot_roc(x, y, labels: list = None):
-        plt.scatter(x, y)
+    def plot_roc(x: list, y: list, labels: list = list()):
+
+        plt.scatter(x[:-1], y[:-1])
+        plt.plot(x[-1], y[-1], 'ro')
 
         if len(labels) != 0:
             for i, txt in enumerate(labels):
